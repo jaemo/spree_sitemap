@@ -9,6 +9,11 @@ module SpreeSitemap::SpreeDefaults
     add(login_path, options)
   end
 
+  def add_site(options={})
+    add_taxons domain: options[:domain]
+    add_products domain: options[:domain]
+  end
+
   def add_signup(options={})
     add(signup_path, options)
   end
@@ -22,7 +27,9 @@ module SpreeSitemap::SpreeDefaults
   end
 
   def add_products(options={})
-    active_products = Spree::Product.active
+    site = Site.find_by(domain: options[:domain])
+    options.tap{ |o| o.delete(:domain) }
+    active_products = site.spree_products.active
 
     add(products_path, options.merge(:lastmod => active_products.last_updated))
     active_products.each do |product|
@@ -37,7 +44,7 @@ module SpreeSitemap::SpreeDefaults
         opts.merge!(:video => [video_options(primary_video.youtube_ref, product)])
       end
 
-      add(product_path(product), opts)
+      add(short_product_link(product_path(product)), opts)
     end
   end
 
@@ -54,7 +61,9 @@ module SpreeSitemap::SpreeDefaults
   end
 
   def add_taxons(options={})
-    Spree::Taxon.roots.each {|taxon| add_taxon(taxon, options) }
+    site = Site.find_by(domain: options[:domain])
+    options.tap{ |o| o.delete(:domain) }
+    site.taxons.roots.each {|taxon| add_taxon(taxon, options) }
   end
 
   def add_taxon(taxon, options={})
@@ -63,6 +72,10 @@ module SpreeSitemap::SpreeDefaults
   end
 
   private
+    def short_product_link(long_product_link)
+      long_product_link.gsub(/\/products\//,"/p/")
+    end
+
     def video_options(youtube_id, object = false)
       # multiple videos of the same ID can exist, but all videos linked in the sitemap should be inique
 
